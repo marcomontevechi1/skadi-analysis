@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skadi-analysis"
+readme = "README.md"
+authors = [
+    {name = "Marco Montevechi Filho", email = "montevechi1618@gmail.com"},
+]
+description = "Utility to analyze Skadi's detector data from RMM."
+keywords = ["detector", "neutron", "SoNDe", "SKADI"]
+dynamic = ["version"]
+dependencies = ["scapy", "pyyaml"]
+
+[project.urls]
+Homepage = "https://github.com/marcomontevechi1/skadi-analysis"
+
+[project.scripts]
+skadi-analyze = "skadi_analysis.SkadiAnalyze:main"
+
