@@ -26,10 +26,19 @@ class GenericPacket:
 		self.raw_data = bytes(packet)
 		self.data["flags"] = f"0x{self.raw_data[20:22].hex()}"
 		self.data["protocol"] = int.from_bytes(self.raw_data[23:24])
+
+		if self.data["protocol"] != 17:
+			return
+
 		self.data["src_addr"] = f"{'.'.join(str(b) for b in self.raw_data[26:30])}"
 		self.data["dst_addr"] = f"{'.'.join(str(b) for b in self.raw_data[30:34])}"
 		self.data["src_port"] = int.from_bytes(self.raw_data[34:36])
 		self.data["dst_port"] = int.from_bytes(self.raw_data[36:38])
+		self.data["UDP length"] = int.from_bytes(self.raw_data[38:40], byteorder="big")
+		
+		if self.data["UDP length"] <= 55:
+			return
+
 		self.data["padding"] = f"0x{self.raw_data[42:43].hex()}"
 		self.data["version"] = int.from_bytes(self.raw_data[43:44])
 		self.data["cookie"] = self.raw_data[44:47].decode()
