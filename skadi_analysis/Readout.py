@@ -12,6 +12,7 @@ class Readout:
 				   3: "Calibration trigger", 4: "External trigger",
 				   5: "Single channel trigger", 6: "XA Multi trigger",
 				   0: "systemclock auto-trigger"}
+	EVENT_TYPES_OM0 = {0: "SyncEvent, normal event", 1: "SyncEvent, too late", 2: "SyncEvent, too early", 3: "SyncEvent, received"}
 
 	def __init__(self, data, number):
 		"""
@@ -36,7 +37,10 @@ class Readout:
 		self.data["ESSTimestamp (clk)"] = int.from_bytes(self.raw_data[8:12], byteorder='little')
 		self.data["OM"] = (self.raw_data[12] & 0xf0) >> 4
 		self.data["Flags"] = (self.raw_data[12] & 0x0f)
-		self.data["EvtType"] = self.EVENT_TYPES[self.data["Flags"]]
+		if self.data["OM"] == 0:
+			self.data["EvtType"] = self.EVENT_TYPES_OM0[self.data["Flags"]]
+		else:
+			self.data["EvtType"] = self.EVENT_TYPES[self.data["Flags"]]
 		self.data["SysID"] = self.raw_data[13]
 		self.data["IPLastOctet"] = self.raw_data[14]
 		self.data["Channel"] = self.raw_data[15]
