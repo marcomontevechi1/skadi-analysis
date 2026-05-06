@@ -27,7 +27,7 @@ def main():
             p = GenericPacket(packet)
             p.pretty_print(readout_number=args.readouts)
             packet_count += 1
-        print(f"Analyzed {packet_count + 1} packets")
+        print(f"Analyzed {packet_count} packets")
 
 if __name__ == "__main__":
     main()
