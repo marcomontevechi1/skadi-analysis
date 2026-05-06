@@ -7,7 +7,7 @@ from .GenericPacket import GenericPacket
 
 def main():
     parser = ArgumentParser(description="Analyze PCAP files")
-    parser.add_argument("--file", "-f", help="Path to the PCAP file to analyze")
+    parser.add_argument("--file", "-f", required=True, help="Path to the PCAP file to analyze")
     parser.add_argument("--number", "-n", type=int, default=None, 
                         help="Number of packets to read. (None for all)")
     parser.add_argument("--start", "-s", type=int, default=0, 
