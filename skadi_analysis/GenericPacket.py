@@ -28,6 +28,7 @@ class GenericPacket:
 		self.data["protocol"] = int.from_bytes(self.raw_data[23:24])
 
 		if self.data["protocol"] != 17:
+			self.data["packet_type"] = "Non-17"
 			return
 
 		self.data["src_addr"] = f"{'.'.join(str(b) for b in self.raw_data[26:30])}"
@@ -39,8 +40,11 @@ class GenericPacket:
 		"""
 		Next line introduces corner case. Maybe there is a better way to do it?
 		"""
-		if (self.data["UDP length"] <= 55 or
-			(self.data["dst_port"] == 5353 and self.data["dst_addr"].split(".")[-1] == "251")):
+		if self.data["UDP length"] <= 55:
+			self.data["packet_type"] = "Short-UDP"
+			return
+		if self.data["dst_port"] == 5353 and self.data["dst_addr"].split(".")[-1] == "251":
+			self.data["packet_type"] = "MDNS"
 			return
 
 		self.data["padding"] = f"0x{self.raw_data[42:43].hex()}"
@@ -48,8 +52,10 @@ class GenericPacket:
 		self.data["cookie"] = self.raw_data[44:47].decode()
 
 		if self.data["cookie"] != "ESS":
+			self.data["packet_type"] = "Unknown"
 			return
 
+		self.data["packet_type"] = "Skadi-RMM"
 		self.data["detector_type"] = f"0x{self.raw_data[47:48].hex()}"
 		self.data["length"] = int.from_bytes(self.raw_data[48:50][::-1])
 		self.data["output_queue"] = int.from_bytes(self.raw_data[50:51])
