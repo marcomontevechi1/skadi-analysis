@@ -35,8 +35,12 @@ class GenericPacket:
 		self.data["src_port"] = int.from_bytes(self.raw_data[34:36])
 		self.data["dst_port"] = int.from_bytes(self.raw_data[36:38])
 		self.data["UDP length"] = int.from_bytes(self.raw_data[38:40], byteorder="big")
-		
-		if self.data["UDP length"] <= 55:
+
+		"""
+		Next line introduces corner case. Maybe there is a better way to do it?
+		"""
+		if (self.data["UDP length"] <= 55 or
+			(self.data["dst_port"] == 5353 and self.data["dst_addr"].split(".")[-1] == "251")):
 			return
 
 		self.data["padding"] = f"0x{self.raw_data[42:43].hex()}"
