@@ -11,7 +11,7 @@ authors = [
 description = "Utility to analyze Skadi's detector data from RMM."
 keywords = ["detector", "neutron", "SoNDe", "SKADI"]
 dynamic = ["version"]
-dependencies = ["scapy", "pyyaml"]
+dependencies = ["scapy", "pyyaml", "numpy", "matplotlib"]
 
 [project.urls]
 Homepage = "https://github.com/marcomontevechi1/skadi-analysis"
