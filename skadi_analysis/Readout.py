@@ -14,7 +14,7 @@ class Readout:
 				   0: "systemclock auto-trigger"}
 	EVENT_TYPES_OM0 = {0: "SyncEvent, normal event", 1: "SyncEvent, too late", 2: "SyncEvent, too early", 3: "SyncEvent, received"}
 
-	def __init__(self, data, number):
+	def __init__(self, raw_data, number):
 		"""
 		Initialize Readout with specific data.
 
@@ -23,30 +23,29 @@ class Readout:
 				the object will only get what it needs and throw away the rest.
 		    number: readout number
 		"""
-		self.raw_data = data
 		self.data = dict()
 
 		self.data["ReadoutNumber"] = number
-		self.data["RingID"] = self.raw_data[0]
-		self.data["FENID"] = self.raw_data[1]
-		self.data["DataLength"] = int.from_bytes(self.raw_data[2:4], byteorder='little')
+		self.data["RingID"] = raw_data[0]
+		self.data["FENID"] = raw_data[1]
+		self.data["DataLength"] = int.from_bytes(raw_data[2:4], byteorder='little')
 
-		self.raw_data = self.raw_data[0:self.HEADER_SIZE + self.data["DataLength"]] # Throw away what it doesn't need
+		raw_data = raw_data[0:self.HEADER_SIZE + self.data["DataLength"]] # Throw away what it doesn't need
 
-		self.data["ESSTimestamp (s)"] = int.from_bytes(self.raw_data[4:8], byteorder='little')
-		self.data["ESSTimestamp (clk)"] = int.from_bytes(self.raw_data[8:12], byteorder='little')
-		self.data["OM"] = (self.raw_data[12] & 0xf0) >> 4
-		self.data["Flags"] = (self.raw_data[12] & 0x0f)
+		self.data["ESSTimestamp (s)"] = int.from_bytes(raw_data[4:8], byteorder='little')
+		self.data["ESSTimestamp (clk)"] = int.from_bytes(raw_data[8:12], byteorder='little')
+		self.data["OM"] = (raw_data[12] & 0xf0) >> 4
+		self.data["Flags"] = (raw_data[12] & 0x0f)
 		if self.data["OM"] == 0:
 			self.data["EvtType"] = self.EVENT_TYPES_OM0[self.data["Flags"]]
 		else:
 			self.data["EvtType"] = self.EVENT_TYPES[self.data["Flags"]]
-		self.data["SysID"] = self.raw_data[13]
-		self.data["IPLastOctet"] = self.raw_data[14]
-		self.data["Channel"] = self.raw_data[15]
-		self.data["Column"] = self.raw_data[16]
-		self.data["Row"] = int.from_bytes(self.raw_data[17:18])
-		self.data["ADC"] = int.from_bytes(self.raw_data[18:20], byteorder="little")
+		self.data["SysID"] = raw_data[13]
+		self.data["IPLastOctet"] = raw_data[14]
+		self.data["Channel"] = raw_data[15]
+		self.data["Column"] = raw_data[16]
+		self.data["Row"] = int.from_bytes(raw_data[17:18])
+		self.data["ADC"] = int.from_bytes(raw_data[18:20], byteorder="little")
 
 	def pretty_print(self):
 		print(f"Readout Data {self.data['ReadoutNumber']}")
