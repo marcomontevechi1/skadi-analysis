@@ -66,7 +66,11 @@ class GenericPacket:
 		
 		position = 0
 		while position < len(self.raw_data) - START_HDR_SIZE:
-			self.readouts.append(Readout(self.raw_data[START_HDR_SIZE + position:START_HDR_SIZE + position + self.maxdatasize], len(self.readouts) + 1))
+			try:
+				self.readouts.append(Readout(self.raw_data[START_HDR_SIZE + position:START_HDR_SIZE + position + self.maxdatasize], len(self.readouts) + 1))
+			except Exception as e:
+				print(f"Error occurred while processing readout in SeqNo {self.data["sequence_number"]} at position {position}: {e}")
+				break
 			position += self.readouts[-1].data["DataLength"]
 
 	def pretty_print(self, readout_number = None):
