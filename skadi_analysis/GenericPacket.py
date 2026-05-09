@@ -19,11 +19,17 @@ class GenericPacket:
 
 		Args:
 		    packet: A packet object from scapy.all.PcapReader
+
+		Elements from data:
+			pkt_arrival_time: timestamp from packet arrival time
+			cookie: ESS cookie, if present
+
 		"""
 		self.packet = packet
 		self.data = dict()
 		self.readouts = []
 		self.raw_data = bytes(packet)
+		self.data["pkt_arrival_time"] = float(self.packet.time)
 		self.data["flags"] = f"0x{self.raw_data[20:22].hex()}"
 		self.data["protocol"] = int.from_bytes(self.raw_data[23:24])
 
