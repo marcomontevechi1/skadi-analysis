@@ -3,8 +3,8 @@
 from scapy.all import PcapReader
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import Counter
 
+from .Board import Board
 from .GenericPacket import GenericPacket
 
 class Analyzer:
@@ -20,16 +20,18 @@ class Analyzer:
 		files: list of files analyzed
 		ReadoutNUmber: list of number of readouts per packet
 		PacketTimestamps: list of packet arrival times
+	self.boards: dict of board objects. Should be dynamically filled by self.decode()
 	"""
 
-	def __init__(self, *files):
+	def __init__(self, verbose = False, *files):
 
 		self.data = {"PacketTypes": {"Non-17": 0, "Short-UDP": 0, "MDNS": 0, "Unknown": 0, "Skadi-RMM": 0},
 			   		 "files": [], "ReadoutNumber": [], "PacketTimestamps": []}
+		self.boards = dict()
+		self.verbose = verbose
 
 		for file in files:
 			self.data["files"].append(file)
-
 
 	def decode(self):
 		"""
@@ -37,6 +39,7 @@ class Analyzer:
 		"""
 		for file in self.data["files"]:
 			with PcapReader(file) as pcap:
+				packet_count = 0
 				for packet in pcap:
 					p = GenericPacket(packet)
 					self.data["PacketTypes"][p.data["packet_type"]]+=1
@@ -45,6 +48,14 @@ class Analyzer:
 
 					self.data["ReadoutNumber"].append(len(p.readouts))
 					self.data["PacketTimestamps"].append(p.data["pkt_arrival_time"])
+					for readout in p.readouts:
+						if readout.data["IPLastOctet"] not in self.boards.keys():
+							self.boards[readout.data["IPLastOctet"]] = Board(readout.data["IPLastOctet"])
+						self.boards[readout.data["IPLastOctet"]].add_readout(readout)
+
+					packet_count += 1
+					if self.verbose:
+						print(f"\rFinished decoding packet {packet_count}", end='', flush=True)
 
 	def print_packets(self, start, number = None, readouts = 0):
 		"""
@@ -80,3 +91,9 @@ class Analyzer:
 		axs[1].set_title("Readouts per unix timestamp")
 
 		plt.show()
+
+	def plot_board_adc(self, board, bin_number, channel = None):
+		"""
+		Calls plot_pulseheight for a given board and channel, with <bin_number> number of bins.
+		"""
+		self.boards[board].plot_pulseheight(bin_number, channel)

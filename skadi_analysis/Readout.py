@@ -4,7 +4,11 @@ from operator import add
 import yaml
 
 class Readout:
-	"""A class to process and analyze specific readout data from Skadi"""
+	"""
+	A class to process and analyze specific readout data from Skadi
+	I left almost all class parameters as dictionary keys because that would be easy to pretty print,
+	but that was clearly a mistake.
+	"""
 
 	HEADER_SIZE = 16
 	OPERATION_MODES = ["TRIGGER TIME", "SINGLE PULSE-HEIGHT", "MULTIPLE PULSE-HEIGHT"]

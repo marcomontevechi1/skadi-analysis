@@ -17,16 +17,23 @@ def main():
     parser.add_argument("--readouts", "-r", type=int, default=0, 
                         help="Number of readouts to print for each packet. (None for all)")
     parser.add_argument("--plot-packets", help="Plots number of packets and readout in time. Should have a bin number.",
-                        default = None, type=int)
+                        default = False, action = 'store_true')
+    parser.add_argument("--plot-adc-board", help="Plots pulseheight distribution for a given board. See also ", type=int)
+    parser.add_argument("--bin-number", "-b", help="Bin number for any plotting.", type=int)
+    parser.add_argument("--channel", "-c", help="Channel for plotting pulseHeight distribution.", type=int, default=None)
+    parser.add_argument("--verbose", "-v", help="Talk about decoding progress", default=False, action = 'store_true')
     args = parser.parse_args()
 
-    a = Analyzer(args.file)
+    a = Analyzer(args.verbose, args.file)
 
     if args.print:
         a.print_packets(args.start, args.number, args.readouts)
-    if args.plot_packets is not None:
-        a.decode()
-        a.plot_arrival_times(bin_number=args.plot_packets)
+    
+    a.decode()
+    if args.plot_packets:
+        a.plot_arrival_times(bin_number=args.bin_number)
+    if args.plot_adc_board is not None:
+        a.plot_board_adc(args.plot_adc_board, args.bin_number, args.channel)
 
 if __name__ == "__main__":
     main()
