@@ -16,12 +16,17 @@ def main():
                         help="Starting packet number (0 indexation).")
     parser.add_argument("--readouts", "-r", type=int, default=0, 
                         help="Number of readouts to print for each packet. (None for all)")
+    parser.add_argument("--plot-packets", help="Plots number of packets and readout in time. Should have a bin number.",
+                        default = None, type=int)
     args = parser.parse_args()
 
     a = Analyzer(args.file)
 
     if args.print:
         a.print_packets(args.start, args.number, args.readouts)
+    if args.plot_packets is not None:
+        a.decode()
+        a.plot_arrival_times(bin_number=args.plot_packets)
 
 if __name__ == "__main__":
     main()
