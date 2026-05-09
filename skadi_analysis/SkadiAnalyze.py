@@ -18,22 +18,23 @@ def main():
                         help="Number of readouts to print for each packet. (None for all)")
     parser.add_argument("--plot-packets", help="Plots number of packets and readout in time. Should have a bin number.",
                         default = False, action = 'store_true')
-    parser.add_argument("--plot-adc-board", help="Plots pulseheight distribution for a given board. See also ", type=int)
-    parser.add_argument("--bin-number", "-b", help="Bin number for any plotting.", type=int)
+    parser.add_argument("--plot-adc-board", help="Plots pulseheight distribution for a given board. See also bin-size.", type=int)
+    parser.add_argument("--bin-number", "-b", help="Bin number for timestamp plotting.", type=int)
+    parser.add_argument("--bin-size", help="Size of bin for ADC plotting. Bin number will be plotted automatically.", type=int, default=1)
     parser.add_argument("--channel", "-c", help="Channel for plotting pulseHeight distribution.", type=int, default=None)
     parser.add_argument("--verbose", "-v", help="Talk about decoding progress", default=False, action = 'store_true')
+    parser.add_argument("--dump", "-d", help="Filename to dump info in", type=str, default=None)
     args = parser.parse_args()
 
     a = Analyzer(args.verbose, args.file)
 
     if args.print:
         a.print_packets(args.start, args.number, args.readouts)
-    
-    a.decode()
     if args.plot_packets:
+        a.decode()
         a.plot_arrival_times(bin_number=args.bin_number)
     if args.plot_adc_board is not None:
-        a.plot_board_adc(args.plot_adc_board, args.bin_number, args.channel)
+        a.plot_board_adc(args.plot_adc_board, args.bin_size, args.channel, args.dump)
 
 if __name__ == "__main__":
     main()

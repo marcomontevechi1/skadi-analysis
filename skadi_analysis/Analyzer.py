@@ -3,14 +3,19 @@
 from scapy.all import PcapReader
 import numpy as np
 import matplotlib.pyplot as plt
+import yaml
 
-from .Board import Board
 from .GenericPacket import GenericPacket
+
+MAX_ADC_HEIGHT = 65535
 
 class Analyzer:
 
 	"""
 	Receives a list of pcap filenames, compile them into statistics.
+
+	Due to the files being big, most of the functions decode in execution time and store only what they
+	must in memory. This is slow, but we are limited in RAM so...
 
 	files: list of file names
 	resolution for event per time histogram
@@ -48,10 +53,6 @@ class Analyzer:
 
 					self.data["ReadoutNumber"].append(len(p.readouts))
 					self.data["PacketTimestamps"].append(p.data["pkt_arrival_time"])
-					for readout in p.readouts:
-						if readout.data["IPLastOctet"] not in self.boards.keys():
-							self.boards[readout.data["IPLastOctet"]] = Board(readout.data["IPLastOctet"])
-						self.boards[readout.data["IPLastOctet"]].add_readout(readout)
 
 					packet_count += 1
 					if self.verbose:
@@ -92,8 +93,49 @@ class Analyzer:
 
 		plt.show()
 
-	def plot_board_adc(self, board, bin_number, channel = None):
+	def plot_board_adc(self, board, bin_size, channel = None, dumpfile = None):
 		"""
-		Calls plot_pulseheight for a given board and channel, with <bin_number> number of bins.
+		Decodes packets, plots a histogram of ADCs with bins size of bin_size.
+		Bin size is size of bins so that bin_number can be adjusted automatically accordingly.
+
+		There are easier ways of doing this, but this is done in order to allow for
+		opening big files without using all system's RAM.
 		"""
-		self.boards[board].plot_pulseheight(bin_number, channel)
+
+		pkt_count = 0
+		binned = np.zeros(MAX_ADC_HEIGHT//bin_size + 1, dtype=int)
+
+		for file in self.data["files"]:
+
+			with PcapReader(file) as pcap:
+
+				for packet in pcap:
+					p = GenericPacket(packet)
+					if p.data["packet_type"]!="Skadi-RMM":
+						continue
+
+					for readout in p.readouts:
+						octet = readout.data["IPLastOctet"]
+						ch = readout.data["Channel"]
+						if (board is None or board == octet) and (channel is None or channel == ch):
+							binned[readout.data["ADC"]//bin_size]+=1
+				
+					pkt_count += 1
+					if self.verbose:
+						print(f"\rFinished decoding packet {pkt_count}", end='', flush=True)
+		if self.verbose:
+			print("")
+
+		largest_nonzero_index = np.max(np.nonzero(binned))
+		binned = binned[:largest_nonzero_index+1]
+		edges = np.arange(len(binned) + 1) * bin_size
+
+		if dumpfile is not None:
+			data = {"Binned number of events": binned.tolist(), "edges": edges.tolist(), 
+		   "Board": board, "Channel": channel, "Bin size": bin_size}
+			with open(dumpfile, 'w') as file:
+				file.write(yaml.dump(data))
+
+		plt.stairs(binned, edges)
+		plt.title("ADC PulseHeight distribution")
+		plt.show()
