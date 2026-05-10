@@ -18,7 +18,9 @@ def main():
                         help="Number of readouts to print for each packet. (None for all)")
     parser.add_argument("--plot-packets", help="Plots number of packets and readout in time. Should have a bin number.",
                         default = False, action = 'store_true')
-    parser.add_argument("--plot-adc-board", help="Plots pulseheight distribution for a given board. See also bin-size.", type=int)
+    parser.add_argument("--plot-adc-board", help="Plots pulseheight distribution for a given board. See also bin-size.", 
+                        default=False, action = 'store_true')
+    parser.add_argument("--board-number", help="Board number for ADC plotting", type=int, default=None)
     parser.add_argument("--bin-number", "-b", help="Bin number for timestamp plotting.", type=int)
     parser.add_argument("--bin-size", help="Size of bin for ADC plotting. Bin number will be plotted automatically.", type=int, default=1)
     parser.add_argument("--channel", "-c", help="Channel for plotting pulseHeight distribution.", type=int, default=None)
@@ -33,8 +35,8 @@ def main():
     if args.plot_packets:
         a.decode()
         a.plot_arrival_times(bin_number=args.bin_number)
-    if args.plot_adc_board is not None:
-        a.plot_board_adc(args.plot_adc_board, args.bin_size, args.channel, args.dump)
+    if args.plot_adc_board:
+        a.plot_board_adc(args.board_number, args.bin_size, args.channel, args.dump)
 
 if __name__ == "__main__":
     main()

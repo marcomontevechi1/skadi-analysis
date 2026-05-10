@@ -103,7 +103,7 @@ class Analyzer:
 		"""
 
 		pkt_count = 0
-		binned = np.zeros(MAX_ADC_HEIGHT//bin_size + 1, dtype=int)
+		boards = dict() #board[boardidx] = chan. chan[idx] = binned.
 
 		for file in self.data["files"]:
 
@@ -117,8 +117,9 @@ class Analyzer:
 					for readout in p.readouts:
 						octet = readout.data["IPLastOctet"]
 						ch = readout.data["Channel"]
-						if (board is None or board == octet) and (channel is None or channel == ch):
-							binned[readout.data["ADC"]//bin_size]+=1
+						if octet not in boards.keys():
+							boards[octet] = np.zeros((256, MAX_ADC_HEIGHT//bin_size + 1), dtype=int)
+						boards[octet][ch][readout.data["ADC"]//bin_size]+=1
 				
 					pkt_count += 1
 					if self.verbose:
@@ -126,15 +127,36 @@ class Analyzer:
 		if self.verbose:
 			print("")
 
+		if board is None:
+			binned = np.zeros(MAX_ADC_HEIGHT//bin_size + 1, dtype=int)
+			for octet in boards.keys():
+				for ch in range(256):
+					binned += boards[octet][ch]
+		elif channel is None:
+			binned = np.zeros(MAX_ADC_HEIGHT//bin_size + 1, dtype=int)
+			for octet in boards.keys():
+				if octet == board:
+					for ch in range(256):
+						binned += boards[octet][ch]
+		else:
+			binned = boards[board][channel]
 		largest_nonzero_index = np.max(np.nonzero(binned))
 		binned = binned[:largest_nonzero_index+1]
 		edges = np.arange(len(binned) + 1) * bin_size
 
 		if dumpfile is not None:
-			data = {"Binned number of events": binned.tolist(), "edges": edges.tolist(), 
-		   "Board": board, "Channel": channel, "Bin size": bin_size}
+			if self.verbose:
+				print(f"Dumping data to {dumpfile}...")
+			for key in boards.keys():
+				boards[key] = boards[key].tolist()
+			boards["Bin size"] = bin_size
+			boards["Channel"] = channel
+			boards["Board"] = board
+			boards["Files"] = self.data["files"]
 			with open(dumpfile, 'w') as file:
-				file.write(yaml.dump(data))
+				file.write(yaml.dump(boards))
+			if self.verbose:
+				print("Dumped data successfully.")
 
 		plt.stairs(binned, edges)
 		plt.title("ADC PulseHeight distribution")
