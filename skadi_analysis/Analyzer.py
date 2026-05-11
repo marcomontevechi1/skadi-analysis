@@ -93,7 +93,7 @@ class Analyzer:
 
 		plt.show()
 
-	def plot_board_adc(self, board, bin_size, channel = None, dumpfile = None):
+	def plot_board_adc(self, bin_size, channel = None, dumpfile = None):
 		"""
 		Decodes packets, plots a histogram of ADCs with bins size of bin_size.
 		Bin size is size of bins so that bin_number can be adjusted automatically accordingly.
@@ -127,37 +127,41 @@ class Analyzer:
 		if self.verbose:
 			print("")
 
-		if board is None:
-			binned = np.zeros(MAX_ADC_HEIGHT//bin_size + 1, dtype=int)
+		if channel is None:
 			for octet in boards.keys():
-				for ch in range(256):
-					binned += boards[octet][ch]
-		elif channel is None:
-			binned = np.zeros(MAX_ADC_HEIGHT//bin_size + 1, dtype=int)
-			for octet in boards.keys():
-				if octet == board:
-					for ch in range(256):
-						binned += boards[octet][ch]
+				boards[octet] = np.sum(boards[octet], axis=0)
 		else:
-			binned = boards[board][channel]
-		largest_nonzero_index = np.max(np.nonzero(binned))
-		binned = binned[:largest_nonzero_index+1]
-		edges = np.arange(len(binned) + 1) * bin_size
+			for octet in boards.keys():
+				boards[octet] = boards[octet][channel]
 
-		if dumpfile is not None:
+		self.plot_ADC_boards(boards, bin_size)
+		boards["Bin size"] = bin_size
+		boards["Channel"] = channel
+		boards["Files"] = self.data["files"]
+		self.dump_ADC_file(boards, dumpfile)
+
+	def plot_ADC_boards(self, boards, bin_size):
+		fig, ax = plt.subplots(len(boards.keys())//4 + 1, 4)
+		for i, octet in enumerate(sorted(boards)):
+			row = i//4
+			col = i%4
+			largest_nonzero_index = np.max(np.nonzero(boards[octet]))
+			binned = boards[octet][:largest_nonzero_index+1]
+			edges = np.arange(len(binned) + 1) * bin_size
+			ax[row][col].stairs(binned, edges)
+			ax[row][col].set_title(f"Board {octet}")
+		plt.suptitle("ADC PulseHeight distribution")
+		plt.show(block=False)
+
+	def dump_ADC_file(self, boards, filename):
+		if filename is not None:
 			if self.verbose:
-				print(f"Dumping data to {dumpfile}...")
+				print(f"Dumping data to {filename}...")
 			for key in boards.keys():
-				boards[key] = boards[key].tolist()
-			boards["Bin size"] = bin_size
-			boards["Channel"] = channel
-			boards["Board"] = board
-			boards["Files"] = self.data["files"]
-			with open(dumpfile, 'w') as file:
+				if isinstance(boards[key],np.ndarray):
+
+					boards[key] = boards[key].tolist()
+			with open(filename, 'w') as file:
 				file.write(yaml.dump(boards))
 			if self.verbose:
 				print("Dumped data successfully.")
-
-		plt.stairs(binned, edges)
-		plt.title("ADC PulseHeight distribution")
-		plt.show()
