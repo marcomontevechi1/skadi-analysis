@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import yaml
 
 from .GenericPacket import GenericPacket
+from .Readout import Readout
 
 MAX_ADC_HEIGHT = 65535
 
@@ -104,6 +105,13 @@ class Analyzer:
 
 		pkt_count = 0
 		boards = dict() #board[boardidx] = chan. chan[idx] = binned.
+		packet_info = {"OM1": 0, "OM2": 0, "OM3": 0, "Non-17": 0,
+				 	   "Short-UDP": 0, "MDNS": 0, "Unknown": 0, "Skadi-RMM": 0}
+
+		for evt_type in Readout.EVENT_TYPES.values():
+			packet_info[evt_type] = 0
+		for evt_type in Readout.EVENT_TYPES_OM0.values():
+			packet_info[evt_type] = 0
 
 		for file in self.data["files"]:
 
@@ -111,10 +119,14 @@ class Analyzer:
 
 				for packet in pcap:
 					p = GenericPacket(packet)
+					packet_info[p.data["packet_type"]]+=1
 					if p.data["packet_type"]!="Skadi-RMM":
 						continue
 
 					for readout in p.readouts:
+						packet_info[readout.data["EvtType"]]+=1
+						packet_info[f"OM{readout.data['OM']}"]+=1
+
 						octet = readout.data["IPLastOctet"]
 						ch = readout.data["Channel"]
 						if octet not in boards.keys():
@@ -134,11 +146,13 @@ class Analyzer:
 			for octet in boards.keys():
 				boards[octet] = boards[octet][channel]
 
+		print("Packets info:")
+		print(yaml.dump(packet_info, allow_unicode=True, default_flow_style=False))
 		self.plot_ADC_boards(boards, bin_size)
 		boards["Bin size"] = bin_size
 		boards["Channel"] = channel
 		boards["Files"] = self.data["files"]
-		self.dump_ADC_file(boards, dumpfile)
+		self.dump_ADC_file(dict(boards, **packet_info), dumpfile)
 
 	def plot_ADC_boards(self, boards, bin_size):
 		fig, ax = plt.subplots(len(boards.keys())//4 + 1, 4)
@@ -151,7 +165,7 @@ class Analyzer:
 			ax[row][col].stairs(binned, edges)
 			ax[row][col].set_title(f"Board {octet}")
 		plt.suptitle("ADC PulseHeight distribution")
-		plt.show(block=False)
+		plt.show()
 
 	def dump_ADC_file(self, boards, filename):
 		if filename is not None:
