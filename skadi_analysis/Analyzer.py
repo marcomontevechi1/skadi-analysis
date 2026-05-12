@@ -27,6 +27,9 @@ class Analyzer:
             ReadoutNUmber: list of number of readouts per packet
             PacketTimestamps: list of packet arrival times
     self.boards: dict of board objects. Should be dynamically filled by self.decode()
+                             self.boards[octet]["ADC Bins"][channel][bin] = number of events in that bin.
+                             self.boards[octet]["NumEvents"][channel][OperationMode] = number of events
+                             for that channel, that operation mode.
     """
 
     def __init__(self, verbose=False, channel=None, bin_size=None, *files):
@@ -42,6 +45,7 @@ class Analyzer:
             "ReadoutNumber": [],
             "PacketTimestamps": [],
         }  # Should be deprecated in favor of self.packets_stats
+
         self.boards = dict()
         self.packets_stats = {
             "OM1": 0,
@@ -140,10 +144,16 @@ class Analyzer:
                 octet = readout.data["IPLastOctet"]
                 ch = readout.data["Channel"]
                 if octet not in self.boards.keys():
-                    self.boards[octet] = np.zeros(
-                        (256, MAX_ADC_HEIGHT // self.bin_size + 1), dtype=int
-                    )
-                self.boards[octet][ch][readout.data["ADC"] // self.bin_size] += 1
+                    self.boards[octet] = {
+                        "ADC Bins": np.zeros(
+                            (256, MAX_ADC_HEIGHT // self.bin_size + 1), dtype=int
+                        ),
+                        "NumEvents": np.zeros((256, 3), dtype=int),
+                    }
+                self.boards[octet]["ADC Bins"][ch][
+                    readout.data["ADC"] // self.bin_size
+                ] += 1
+                self.boards[octet]["NumEvents"][ch][readout.data["OM"]] += 1
 
             pkt_count += 1
             if self.verbose:
@@ -159,19 +169,20 @@ class Analyzer:
         )
 
     def plot_ADC_boards(self):
+        to_plot = dict()
         if self.channel is None:
             for octet in self.boards.keys():
-                self.boards[octet] = np.sum(self.boards[octet], axis=0)
+                to_plot[octet] = np.sum(self.boards[octet]["ADC Bins"], axis=0)
         else:
             for octet in self.boards.keys():
-                self.boards[octet] = self.boards[octet][self.channel]
+                to_plot[octet] = self.boards[octet]["ADC Bins"][self.channel]
 
-        fig, ax = plt.subplots(len(self.boards.keys()) // 4 + 1, 4)
-        for i, octet in enumerate(sorted(self.boards)):
+        fig, ax = plt.subplots(len(to_plot.keys()) // 4 + 1, 4)
+        for i, octet in enumerate(sorted(to_plot)):
             row = i // 4
             col = i % 4
-            largest_nonzero_index = np.max(np.nonzero(self.boards[octet]))
-            binned = self.boards[octet][: largest_nonzero_index + 1]
+            largest_nonzero_index = np.max(np.nonzero(to_plot[octet]))
+            binned = to_plot[octet][: largest_nonzero_index + 1]
             edges = np.arange(len(binned) + 1) * self.bin_size
             ax[row][col].stairs(binned, edges)
             ax[row][col].set_title(f"Board {octet}")
@@ -182,10 +193,10 @@ class Analyzer:
         data_to_dump = self.boards | self.packets_stats | self.analyzer
         if filename is not None:
             if self.verbose:
-                print(f"Dumping data to {filename}...")
-            for key in data_to_dump.keys():
-                if isinstance(data_to_dump[key], np.ndarray):
-                    data_to_dump[key] = data_to_dump[key].tolist()
+                print("Converting numpy arrays to lists...")
+            recurse_tolist(data_to_dump)
+            if self.verbose:
+                print(f"Dumping data to file {filename}")
             with open(filename, "w") as file:
                 file.write(yaml.dump(data_to_dump))
             if self.verbose:
@@ -199,3 +210,15 @@ class Analyzer:
             with PcapReader(file) as pcap:
                 for packet in pcap:
                     yield GenericPacket(packet)
+
+
+def recurse_tolist(dic: dict):
+    """
+    Recurses through a dictionary trnasforming every
+    numpy array in its values into a list.
+    """
+    for key in dic.keys():
+        if isinstance(dic[key], dict):
+            recurse_tolist(dic[key])
+        elif isinstance(dic[key], np.ndarray):
+            dic[key] = dic[key].tolist()
