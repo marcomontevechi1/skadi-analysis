@@ -43,39 +43,32 @@ class Analyzer:
 		"""
 		Reads packet by packet, stored important info
 		"""
-		for file in self.data["files"]:
-			with PcapReader(file) as pcap:
-				packet_count = 0
-				for packet in pcap:
-					p = GenericPacket(packet)
-					self.data["PacketTypes"][p.data["packet_type"]]+=1
-					if p.data["packet_type"]!="Skadi-RMM":
-						continue
+		for p in self.iterate_packets():
+			self.data["PacketTypes"][p.data["packet_type"]]+=1
+			if p.data["packet_type"]!="Skadi-RMM":
+				continue
 
-					self.data["ReadoutNumber"].append(len(p.readouts))
-					self.data["PacketTimestamps"].append(p.data["pkt_arrival_time"])
+			self.data["ReadoutNumber"].append(len(p.readouts))
+			self.data["PacketTimestamps"].append(p.data["pkt_arrival_time"])
 
-					packet_count += 1
-					if self.verbose:
-						print(f"\rFinished decoding packet {packet_count}", end='', flush=True)
+			packet_count += 1
+			if self.verbose:
+				print(f"\rFinished decoding packet {packet_count}", end='', flush=True)
 
 	def print_packets(self, start, number = None, readouts = 0):
 		"""
 		Prints n packets starting from packet number <start> (0 indexation)
 		"""
-		for file in self.data["files"]:
-			with PcapReader(file) as pcap:
-				packet_count = 0
-				for packet in pcap:
-					if number is not None and packet_count - start >= number:
-						break
-					if start is not None and packet_count < start:
-						packet_count += 1
-						continue
-					p = GenericPacket(packet)
-					p.pretty_print(readout_number=readouts)
-					packet_count += 1
-				print(f"Printed {packet_count} packets")
+		packet_count = 0
+		for packet in self.iterate_packets():
+			if number is not None and packet_count - start >= number:
+				break
+			if start is not None and packet_count < start:
+				packet_count += 1
+				continue
+			packet.pretty_print(readout_number=readouts)
+			packet_count += 1
+		print(f"Printed {packet_count} packets")
 
 	def plot_arrival_times(self, bin_number = 100):
 		fig, axs = plt.subplots(1, 2)
@@ -113,29 +106,25 @@ class Analyzer:
 		for evt_type in Readout.EVENT_TYPES_OM0.values():
 			packet_info[evt_type] = 0
 
-		for file in self.data["files"]:
+		for p in self.iterate_packets():
+			packet_info[p.data["packet_type"]]+=1
+			if p.data["packet_type"]!="Skadi-RMM":
+				continue
 
-			with PcapReader(file) as pcap:
+			for readout in p.readouts:
+				packet_info[readout.data["EvtType"]]+=1
+				packet_info[f"OM{readout.data['OM']}"]+=1
 
-				for packet in pcap:
-					p = GenericPacket(packet)
-					packet_info[p.data["packet_type"]]+=1
-					if p.data["packet_type"]!="Skadi-RMM":
-						continue
-
-					for readout in p.readouts:
-						packet_info[readout.data["EvtType"]]+=1
-						packet_info[f"OM{readout.data['OM']}"]+=1
-
-						octet = readout.data["IPLastOctet"]
-						ch = readout.data["Channel"]
-						if octet not in boards.keys():
-							boards[octet] = np.zeros((256, MAX_ADC_HEIGHT//bin_size + 1), dtype=int)
-						boards[octet][ch][readout.data["ADC"]//bin_size]+=1
+				octet = readout.data["IPLastOctet"]
+				ch = readout.data["Channel"]
+				if octet not in boards.keys():
+					boards[octet] = np.zeros((256, MAX_ADC_HEIGHT//bin_size + 1), dtype=int)
+				boards[octet][ch][readout.data["ADC"]//bin_size]+=1
+		
+			pkt_count += 1
+			if self.verbose:
+				print(f"\rFinished decoding packet {pkt_count}", end='', flush=True)
 				
-					pkt_count += 1
-					if self.verbose:
-						print(f"\rFinished decoding packet {pkt_count}", end='', flush=True)
 		if self.verbose:
 			print("")
 
@@ -179,3 +168,12 @@ class Analyzer:
 				file.write(yaml.dump(boards))
 			if self.verbose:
 				print("Dumped data successfully.")
+
+	def iterate_packets(self):
+		"""
+		Generator that iterates through all packets in all files, yielding a GenericPacket object.
+		"""
+		for file in self.data["files"]:
+			with PcapReader(file) as pcap:
+				for packet in pcap:
+					yield GenericPacket(packet)
