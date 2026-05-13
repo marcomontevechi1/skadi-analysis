@@ -189,7 +189,7 @@ class Analyzer:
         plt.suptitle("ADC PulseHeight distribution")
         plt.show()
 
-    def dump_ADC_file(self, filename):
+    def dump_file(self, filename):
         data_to_dump = self.boards | self.packets_stats | self.analyzer
         if filename is not None:
             if self.verbose:

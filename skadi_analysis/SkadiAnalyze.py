@@ -97,7 +97,7 @@ def main():
     if args.print_packets_stats:
         a.print_packets_stats()
     if args.dump is not None:
-        a.dump_ADC_file(args.dump)
+        a.dump_file(args.dump)
 
 
 if __name__ == "__main__":
