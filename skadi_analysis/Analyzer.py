@@ -159,7 +159,8 @@ class Analyzer:
                 self.boards[octet]["ADC Bins"][ch][
                     readout.data["ADC"] // self.bin_size
                 ] += 1
-                self.boards[octet]["NumEvents"][ch][readout.data["OM"]] += 1
+                if readout.data["EvtType"] == "SyncEvent, normal event":
+                    self.boards[octet]["NumEvents"][ch][readout.data["OM"]] += 1
 
             pkt_count += 1
             if self.verbose:
