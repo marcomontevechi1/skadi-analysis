@@ -3,12 +3,18 @@
 from scapy.all import PcapReader
 import numpy as np
 import matplotlib.pyplot as plt
+from enum import StrEnum
 import yaml
 
 from .GenericPacket import GenericPacket
 from .Readout import Readout
 
 MAX_ADC_HEIGHT = 65535
+
+
+class PossiblePlots(StrEnum):
+    ADC = "ADC"
+    EVENTS = "Events"
 
 
 class Analyzer:
@@ -169,13 +175,7 @@ class Analyzer:
         )
 
     def plot_ADC_boards(self):
-        to_plot = dict()
-        if self.channel is None:
-            for octet in self.boards.keys():
-                to_plot[octet] = np.sum(self.boards[octet]["ADC Bins"], axis=0)
-        else:
-            for octet in self.boards.keys():
-                to_plot[octet] = self.boards[octet]["ADC Bins"][self.channel]
+        to_plot = self.get_to_plot(PossiblePlots.ADC)
 
         fig, ax = plt.subplots(len(to_plot.keys()) // 4 + 1, 4)
         for i, octet in enumerate(sorted(to_plot)):
@@ -188,6 +188,26 @@ class Analyzer:
             ax[row][col].set_title(f"Board {octet}")
         plt.suptitle("ADC PulseHeight distribution")
         plt.show()
+
+    def get_to_plot(self, plot_type: PossiblePlots):
+        to_plot = dict()
+        if self.channel is None:
+            for octet in self.boards.keys():
+                if plot_type == PossiblePlots.ADC:
+                    to_plot[octet] = np.sum(self.boards[octet]["ADC Bins"], axis=0)
+                elif plot_type == PossiblePlots.EVENTS:
+                    to_plot[octet] = self.boards[octet]["NumEvents"]
+                else:
+                    raise ValueError(f"Unknown plot type {plot_type}")
+        else:
+            for octet in self.boards.keys():
+                if plot_type == PossiblePlots.ADC:
+                    to_plot[octet] = self.boards[octet]["ADC Bins"][self.channel]
+                elif plot_type == PossiblePlots.EVENTS:
+                    to_plot[octet] = self.boards[octet]["NumEvents"][self.channel]
+                else:
+                    raise ValueError(f"Unknown plot type {plot_type}")
+        return to_plot
 
     def dump_file(self, filename):
         data_to_dump = self.boards | self.packets_stats | self.analyzer
