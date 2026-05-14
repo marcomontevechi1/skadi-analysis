@@ -82,6 +82,12 @@ def main():
     parser.add_argument(
         "--dump", "-d", help="Filename to dump info in", type=str, default=None
     )
+    parser.add_argument(
+        "--plot-events",
+        help="Plots number of events per channel, per operation mode and sum of total events for each board.",
+        default=False,
+        action="store_true",
+    )
     args = parser.parse_args()
 
     a = Analyzer(args.verbose, args.channel, args.bin_size, args.file)
@@ -98,6 +104,8 @@ def main():
         a.print_packets_stats()
     if args.dump is not None:
         a.dump_file(args.dump)
+    if args.plot_events:
+        a.plot_events()
 
 
 if __name__ == "__main__":

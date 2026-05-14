@@ -189,6 +189,36 @@ class Analyzer:
         plt.suptitle("ADC PulseHeight distribution")
         plt.show()
 
+    def plot_events(self):
+        """
+        For each board, plot the number of events per channel, per operation mode
+        and sum of total events
+        """
+        to_plot = self.get_to_plot(PossiblePlots.EVENTS)
+        fig, ax = plt.subplots(len(to_plot.keys()) // 4 + 1, 4)
+        for i, octet in enumerate(sorted(to_plot)):
+            row = i // 4
+            col = i % 4
+            ax[row][col].set_title(f"Board {octet}")
+            ax[row][col].set_xlabel("Channel")
+            ax[row][col].set_ylabel("Number of events")
+            ax[row][col].plot(
+                to_plot[octet].sum(axis=1), label="Total events", color="red"
+            )
+            ax[row][col].plot(
+                range(0, 256), to_plot[octet][:, 0], label="OM0", color="blue"
+            )
+            ax[row][col].plot(
+                range(0, 256), to_plot[octet][:, 1], label="OM1", color="green"
+            )
+            ax[row][col].plot(
+                range(0, 256), to_plot[octet][:, 2], label="OM2", color="orange"
+            )
+
+            ax[row][col].legend()
+
+        plt.show()
+
     def get_to_plot(self, plot_type: PossiblePlots):
         to_plot = dict()
         if self.channel is None:
