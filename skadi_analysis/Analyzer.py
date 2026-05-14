@@ -48,9 +48,9 @@ class Analyzer:
 
         self.boards = dict()
         self.packets_stats = {
+            "OM0": 0,
             "OM1": 0,
             "OM2": 0,
-            "OM3": 0,
             "Non-17": 0,
             "Short-UDP": 0,
             "MDNS": 0,
