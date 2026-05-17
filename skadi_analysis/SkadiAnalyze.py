@@ -92,9 +92,35 @@ def main():
         default=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--save-plots",
+        "-sp",
+        help="Filename to save plot files. Must include either .pdf or .png extension.",
+        type=str,
+    )
+    parser.add_argument(
+        "--low-events",
+        help="Dumps yaml file with number of events below low-events-threshold.",
+        default=None,
+        type=str,
+    )
+    parser.add_argument(
+        "--low-events-threshold",
+        help="Threshold for low events. Default = 10.",
+        default=10,
+        type=int,
+    )
     args = parser.parse_args()
 
-    a = Analyzer(args.verbose, args.channel, args.bin_size, *args.file)
+    a = Analyzer(
+        args.verbose,
+        args.channel,
+        args.bin_size,
+        args.save_plots,
+        args.low_events,
+        args.low_events_threshold,
+        *args.file,
+    )
     a.decode()
 
     if args.print_packets:
@@ -110,6 +136,8 @@ def main():
         a.dump_file(args.dump)
     if args.plot_events:
         a.plot_events()
+    if args.low_events is not None:
+        a.dump_low_events(args.low_events_threshold)
 
 
 if __name__ == "__main__":

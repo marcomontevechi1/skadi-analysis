@@ -38,7 +38,16 @@ class Analyzer:
                              for that channel, that operation mode.
     """
 
-    def __init__(self, verbose=False, channel=None, bin_size=None, *files):
+    def __init__(
+        self,
+        verbose=False,
+        channel=None,
+        bin_size=None,
+        save_plots=None,
+        low_events=None,
+        low_events_threshold=10,
+        *files,
+    ):
         self.data = {
             "PacketTypes": {
                 "Non-17": 0,
@@ -72,6 +81,9 @@ class Analyzer:
         self.verbose = verbose
         self.channel = channel
         self.bin_size = bin_size
+        self.save_plots = save_plots
+        self.low_events = low_events
+        self.low_events_threshold = low_events_threshold
 
         for file in files:
             self.data["files"].append(file)
@@ -124,6 +136,11 @@ class Analyzer:
 
         axs[1].bar(edges[:-1], y, width=bin_size, align="edge")
         axs[1].set_title("Readouts per unix timestamp")
+
+        if self.save_plots is not None:
+            if self.verbose:
+                print(f"Saving plot file {self.save_plots}")
+            fig.savefig(self.save_plots)
 
         plt.show()
 
@@ -188,6 +205,12 @@ class Analyzer:
             ax[row][col].stairs(binned, edges)
             ax[row][col].set_title(f"Board {octet}")
         plt.suptitle("ADC PulseHeight distribution")
+
+        if self.save_plots is not None:
+            if self.verbose:
+                print(f"Saving plot file {self.save_plots}")
+            fig.savefig(self.save_plots)
+
         plt.show()
 
     def plot_events(self):
@@ -196,29 +219,49 @@ class Analyzer:
         and sum of total events
         """
         to_plot = self.get_to_plot(PossiblePlots.EVENTS)
-        fig, ax = plt.subplots(len(to_plot.keys()) // 4 + 1, 4)
+        fig, ax = plt.subplots(len(to_plot.keys()) // 4 + 1, 4, constrained_layout=True)
         for i, octet in enumerate(sorted(to_plot)):
             row = i // 4
             col = i % 4
-            ax[row][col].set_title(f"Board {octet}")
-            ax[row][col].set_xlabel("Channel")
-            ax[row][col].set_ylabel("Number of events")
-            ax[row][col].plot(
+            current_ax = ax[row][col]
+            current_ax.set_title(f"Board {octet}")
+            current_ax.set_xlabel("Channel")
+            current_ax.set_ylabel("Number of events")
+            current_ax.plot(
                 to_plot[octet].sum(axis=1), label="Total events", color="red"
             )
-            ax[row][col].plot(
+            current_ax.plot(
                 range(0, 256), to_plot[octet][:, 0], label="OM0", color="blue"
             )
-            ax[row][col].plot(
+            current_ax.plot(
                 range(0, 256), to_plot[octet][:, 1], label="OM1", color="green"
             )
-            ax[row][col].plot(
+            current_ax.plot(
                 range(0, 256), to_plot[octet][:, 2], label="OM2", color="orange"
             )
 
-            ax[row][col].legend()
+        handles, labels = current_ax.get_legend_handles_labels()
+        fig.legend(handles, labels, loc="upper left", ncol=4)
+
+        if self.save_plots is not None:
+            if self.verbose:
+                print(f"Saving plot file {self.save_plots}")
+            fig.savefig(self.save_plots, bbox_inches="tight")
 
         plt.show()
+
+    def dump_low_events(self, low=10):
+        """
+        Dumps a yaml file listing which channels have less than <low> events.
+        """
+        low_events = dict()
+        for octet in self.boards.keys():
+            low_events[octet] = []
+            for channel in range(256):
+                if self.boards[octet]["NumEvents"][channel].sum() < low:
+                    low_events[octet].append(channel)
+        with open(self.low_events, "w") as file:
+            file.write(yaml.dump(low_events))
 
     def get_to_plot(self, plot_type: PossiblePlots):
         to_plot = dict()
