@@ -7,7 +7,11 @@ from .Analyzer import Analyzer
 def main():
     parser = ArgumentParser(description="Analyze PCAP files")
     parser.add_argument(
-        "--file", "-f", required=True, help="Path to the PCAP file to analyze"
+        "--file",
+        "-f",
+        required=True,
+        help="Path to the PCAP file(s) to analyze",
+        nargs="+",
     )
     parser.add_argument(
         "--number",
@@ -90,7 +94,7 @@ def main():
     )
     args = parser.parse_args()
 
-    a = Analyzer(args.verbose, args.channel, args.bin_size, args.file)
+    a = Analyzer(args.verbose, args.channel, args.bin_size, *args.file)
     a.decode()
 
     if args.print_packets:
